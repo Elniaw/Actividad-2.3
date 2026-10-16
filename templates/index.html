@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Calculador de Rutas Interactivo - Cisco Lab</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f4f9; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        input, select, button { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007BFF; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #map { height: 450px; margin-top: 20px; border-radius: 8px; }
+        .info { margin-top: 15px; padding: 12px; background: #e2f0cb; border-radius: 4px; line-height: 1.5; color: #2e5210; }
+        .error-box { margin-top: 15px; padding: 12px; background: #f8d7da; color: #721c24; border-radius: 4px; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Calculador de Rutas Interactivo 🦇</h2>
+        <form method="POST">
+            <label>Origen:</label>
+            <input type="text" name="loc1" placeholder="Ej: Calama, Chile" required>
+            
+            <label>Destino:</label>
+            <input type="text" name="loc2" placeholder="Ej: Tierra del Fuego, Chile" required>
+            
+            <label>Modo de transporte:</label>
+            <select name="profile">
+                <option value="driving-car">Auto (Car)</option>
+                <option value="cycling-regular">Bicicleta (Bike)</option>
+                <option value="foot-walking">Caminando (Foot)</option>
+            </select>
+
+            <label>Tipo de Motor (Para cálculo de bencina):</label>
+            <select name="engine">
+                <option value="1.0">Motor 1.0 (Económico)</option>
+                <option value="1.4">Motor 1.4</option>
+                <option value="1.6" selected>Motor 1.6 (Estándar)</option>
+                <option value="1.6t">Motor 1.6 Turbo</option>
+                <option value="2.0">Motor 2.0 (Deportivo/SUV)</option>
+                <option value="v8">Motor V8 (Traga bencina 💀)</option>
+            </select>
+            
+            <button type="submit">Calcular Ruta en el Mapa</button>
+        </form>
+
+        <!-- Mensaje de error amigable -->
+        {% if error_msg %}
+        <div class="error-box">
+            <strong>⚠️ Atención:</strong> {{ error_msg }}
+        </div>
+        {% endif %}
+
+        <!-- Información de la ruta y bencina -->
+        {% if route_info %}
+        <div class="info">
+            <strong>Ruta de:</strong> {{ route_info.name1 }} ➔ {{ route_info.name2 }}<br>
+            <strong>Distancia:</strong> {{ route_info.distance_km }} km<br>
+            <strong>Duración estimada:</strong> {{ route_info.duration_min }} minutos<br>
+            <strong>🚗 Motor seleccionado:</strong> {{ route_info.engine_label }}<br>
+            <strong>⛽ Costo Estimado Bencina:</strong> {{ route_info.costo_bencina }} CLP
+        </div>
+        {% endif %}
+
+        <div id="map"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Mapa centrado en Chile por defecto con un zoom mayor para ver el país entero
+        var map = L.map('map').setView([-35.6751, -71.5430], 4);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Si Python envió una ruta, dibujarla en el mapa
+        var coords = {{ coords_path | tojson }};
+        if (coords && coords.length > 0) {
+            var polyline = L.polyline(coords, {color: '#007BFF', weight: 6}).addTo(map);
+            map.fitBounds(polyline.getBounds());
+            
+            L.marker(coords[0]).addTo(map).bindPopup("<b>Inicio (Origen)</b>").openPopup();
+            L.marker(coords[coords.length - 1]).addTo(map).bindPopup("<b>Destino</b>");
+        }
+    </script>
+</body>
+</html>
